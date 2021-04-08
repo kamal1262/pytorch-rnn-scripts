@@ -11,6 +11,14 @@ JSON_CONTENT_TYPE = 'application/json'
 
 logger = logging.getLogger(__name__)
 
+# kamal will print now
+
+print("========================================================================")
+print(" Did we managed to import scipy module, just checking !!!")
+from scipy.spatial import distance
+print("========================================================================")
+print(" if successful, it should not have any error!")
+
 
 def model_fn(model_dir):
     logger.info('Loading the model.')
