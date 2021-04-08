@@ -7,6 +7,17 @@ import time
 import torch
 import torch.nn as nn
 
+
+
+# kamal will print now
+
+print("========================================================================")
+print(" Did we managed to import scipy module, just checking !!!")
+from scipy.spatial import distance
+print("========================================================================")
+print(" if successful, it should not have any error!")
+
+
 import data
 from rnn import RNNModel
 
