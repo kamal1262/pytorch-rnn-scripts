@@ -98,6 +98,7 @@ class SkipGram(nn.Module):
 #     return model
 
 def input_fn(request_body, content_type):
+    print("currently in input function...............!\n\n\n")
     """An input_fn that loads a json input"""
     logging.info(f"Inference request body: {request_body}")
     if content_type == 'application/json':
@@ -137,6 +138,7 @@ def model_fn(model_dir):
     return {"model": model.eval(),"loc2idx": loc2idx, "idx2loc": idx2loc }
 
 def predict_fn(input_data, model_artifact):
+    print("currently predictiong ------------>!\n\n\n")
     model = model_artifact['model']
     loc2idx = model_artifact['loc2idx']
     idx2loc = model_artifact['idx2loc']
@@ -161,6 +163,30 @@ def predict_fn(input_data, model_artifact):
 
     
 def output_fn(predictions, content_type):
+    print("return the final output!-------------> ")
     # for idx, pred in enumerate(predictions):
     #     predictions[idx]["global_id"] = id2loc_dict[pred["id"]]
     return predictions
+
+
+# if __name__ == "__main__":
+    
+#     input_sample = """{"locationIDInput": ["mysta_25733"], "count": 10}"""
+#     request_content_type = "application/json"
+#     response_content_type = "application/json"
+# #     # model_dir = "models/"
+#     model_dir = '/Users/md.kamal/work-code-sample/temp/test-location-recommendation/artifact/'
+
+# # #     with open(f"{model_dir}/dict_loc.pickle", 'rb') as f:
+# # #         dict_loc = pickle.load(f)
+
+# # #     loc2id_dict = {w: idx for (idx, w) in enumerate(dict_loc)}
+# # #     id2loc_dict = {idx: w for (idx, w) in enumerate(dict_loc)}
+ 
+
+#     input_obj = input_fn(input_sample, request_content_type)
+#     model = model_fn(model_dir)
+#     prediction = predict_fn(input_obj, model)
+#     output = output_fn(prediction, response_content_type)
+    
+#     print(output)
