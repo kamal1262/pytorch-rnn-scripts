@@ -1,3 +1,5 @@
+import os 
+import argparse
 import torch
 from torch.autograd import Variable
 import numpy as np
@@ -12,8 +14,8 @@ from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-# import pyarrow as pa
-# import pyarrow.parquet as pq
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 
 ## sequence 
@@ -28,7 +30,6 @@ import torch
 from torch.utils.data import Dataset
 
 ## train module 
-import os 
 import gzip
 import pickle
 import datetime
@@ -40,13 +41,37 @@ from typing import Dict, List, Tuple
 
 from torch.utils.data import DataLoader
 
+###
+parser = argparse.ArgumentParser(description='Word2Vec recommendation system')
+
+# Data and model checkpoints/otput directories from the container environment
+parser.add_argument('--model-dir', type=str, default=os.environ['SM_MODEL_DIR'])
+parser.add_argument('--output-data-dir', type=str, default=os.environ['SM_OUTPUT_DATA_DIR'])
+parser.add_argument('--data-dir', type=str, default=os.environ['SM_CHANNEL_TRAINING'])
+
+# args = parser.parse_args()
+# model_dir = os.environ['SM_MODEL_DIR']
+# output_data_dir = os.environ['SM_OUTPUT_DATA_DIR']
+# data_dir = os.environ['SM_CHANNEL_TRAINING']
+
+args = parser.parse_args()
+print('model_dir:', args.model_dir)
+
+model_path = os.path.join(args.model_dir, 'model.pth')
+checkpoint_path = os.path.join(args.model_dir, 'model_checkpoint.pth')
+
+model_info_path = os.path.join(args.output_data_dir, 'model_info.pth')
+checkpoint_state_path = os.path.join(args.output_data_dir, 'model_info.pth')
+
+### 
+
 #load sequnece data
 # data_path = '/Users/md.kamal/work-code-sample/location-recommendation/notebooks'
-data_path = 's3://sagemaker-ap-southeast-1-961063351939/location-recom'
-with open("/opt/ml/input/data/train/list_seq.pickle", 'rb') as f:
+
+with open(f"{args.data_dir}/list_seq.pickle", 'rb') as f:
     list_seq = pickle.load(f)
 
-with open("/opt/ml/input/data/train/dict_loc.pickle", 'rb') as f:
+with open(f"{args.data_dir}/dict_loc.pickle", 'rb') as f:
     dict_loc = pickle.load(f)
 
 loc2idx = {w: idx for (idx, w) in enumerate(dict_loc)}
@@ -56,24 +81,18 @@ print(f"vocab_size:{vocab_size}")
 
 
 vocab_size = 628
-EMB_SIZE = 128
 torch.manual_seed(1368)
 
 shuffle = True
 embedding_dims = 128
-epochs = 5
+epochs = 3
 initial_lr = 0.025
 batch_size = 16
 n_workers = 16
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-def save_model(model, model_dir):
-    print("Saving the model.")
-    path = os.path.join(model_dir, 'model.pth')
-    # recommended way from http://pytorch.org/docs/master/notes/serialization.html
-    torch.save(model.cpu().state_dict(), path)
-    
+
 
 class SkipGram(nn.Module):
 
@@ -81,8 +100,6 @@ class SkipGram(nn.Module):
         super().__init__()
         self.emb_size = emb_size
         self.emb_dim = emb_dim
-        self.loc2idx = loc2idx
-        self.idx2loc = idx2loc
         self.center_embeddings = nn.Embedding(emb_size, emb_dim, sparse=True)
         self.context_embeddings = nn.Embedding(emb_size, emb_dim, sparse=True)
         self.init_emb()
@@ -397,7 +414,7 @@ for epoch in tqdm(range(epochs), total=epochs, position=0, leave=True):
     current_datetime = datetime.datetime.now().strftime('%Y-%m-%d-%H%M')
 #     state_dict_path = '{}/skipgram_epoch_{}_{}.pt'.format(MODEL_PATH, epoch, current_datetime)
     # state_dict_path="/Users/md.kamal/work-code-sample/location-recommendation/notebooks/all-model-state.pt"
-
+    # state_dict_path =f"{data_path}/all-model-state.pt"
     checkpoint = { "epoch": epoch,
                   "model_state": skipgram.state_dict(),
                   "optim_state": optimizer.state_dict(),
@@ -405,30 +422,15 @@ for epoch in tqdm(range(epochs), total=epochs, position=0, leave=True):
                   "idx2loc": idx2loc
                   
     }
-#     torch.save(checkpoint, state_dict_path)
+    torch.save(checkpoint, checkpoint_path)
 #     torch.save(skipgram.state_dict(), state_dict_path)
-#     print('Model state dict saved to {}'.format(state_dict_path))
-
-# save_model(skipgram, model_dir)
-# skipgram.save_embeddings(f"{model_dir}/embeddings.npy")
-
-# model_dir ='/opt/ml/output/model/'
-
-model_dir ="/opt/ml/input/data/train/"
-
-
-# model_path = os.path.join(os.getcwd(), '/model.pth')
-current_model_dir = os.getcwd()+'/model.pth'
-print('current_model_dir:', current_model_dir)
-# # Move the best model to cpu and resave it
-with open(current_model_dir, 'wb') as f:
-    torch.save(skipgram.cpu().state_dict(), f)
-
-state_dict_path = os.getcwd()+'/all-model-state.pt'
-torch.save(checkpoint, state_dict_path)
-
-# current_model_dir: /opt/ml/code/model.pt
+    print('Model state dict saved to {}'.format(checkpoint_path))
 
 end_time = datetime.datetime.now()
 time_diff = round((end_time - start_time).total_seconds() / 60, 2)
 print('Total time taken: {:,} minutes'.format(time_diff))
+
+with open(model_path, 'wb') as f:
+    torch.save(skipgram.cpu().state_dict(), f)
+# save_model(skipgram, model_dir)
+# skipgram.save_embeddings(f"{model_dir}/embeddings.npy")

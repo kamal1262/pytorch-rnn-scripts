@@ -17,7 +17,6 @@ import torch.nn.functional as F
 # from skipgram import SkipGram
 from scipy.spatial import distance
 
-model_artifact_path = 's3://sagemaker-ap-southeast-1-961063351939/location-recom/'
 
 VOCAB_SIZE = 628
 EMB_SIZE = 128
@@ -86,22 +85,22 @@ class SkipGram(nn.Module):
         np.save(file_name, embedding)
 
 
-def load_index_mapping(model_dir, model_fname):
-    """
-    Loads model from gzip format
-    Args:
-        model_dir: Path to load model from
-        model_fname: File to load
-    Returns:
-    """
-    model_path = os.path.join(model_dir, model_fname)
-    with gzip.open(model_path, 'rb') as f:
-        model = pickle.load(f)
+# def load_index_mapping(model_dir, model_fname):
+#     """
+#     Loads model from gzip format
+#     Args:
+#         model_dir: Path to load model from
+#         model_fname: File to load
+#     Returns:
+#     """
+#     model_path = os.path.join(model_dir, model_fname)
+#     with gzip.open(model_path, 'rb') as f:
+#         model = pickle.load(f)
     
-    logging.info('Model loaded from: {}'.format(model_path))
-    return model
+#     logging.info('Model loaded from: {}'.format(model_path))
+#     return model
 
-def input_fn(request_body, loc2id_dict, content_type):
+def input_fn(request_body, content_type):
     """An input_fn that loads a json input"""
     logging.info(f"Inference request body: {request_body}")
     if content_type == 'application/json':
@@ -109,7 +108,8 @@ def input_fn(request_body, loc2id_dict, content_type):
         logging.info(f"Inference request json body: {input_data}")
         
         params = {}
-        params['locationIDInput'] = [ loc2id_dict[input_d] for input_d in input_data['locationIDInput'] ]
+        # params['locationIDInput'] = [ loc2id_dict[input_d] for input_d in input_data['locationIDInput'] ]
+        params['locationIDInput'] = [ input_d for input_d in input_data['locationIDInput'] ]
         params['count'] = input_data['count'] if 'count' in input_data else 5;
     else:
         raise Exception(
@@ -122,21 +122,25 @@ def model_fn(model_dir):
     model = SkipGram(VOCAB_SIZE, EMB_SIZE).to(device)
     
     # Loading the model
-    loaded_checkpoint = torch.load(model_dir+'/all-model-state.pt', map_location=device)
+    # loaded_checkpoint = torch.load(model_dir+'/all-model-state.pt', map_location=device)
+    with open(os.path.join(model_dir, 'model.pth'), 'rb') as f:
+        model.load_state_dict(torch.load(f, map_location=device))
 
-    loaded_checkpoint["epoch"]
-
-    model.load_state_dict(loaded_checkpoint['model_state'])
-    # with open(os.path.join(model_dir, 'all-model-state.pt'), 'rb') as f:
-    #     model.load_state_dict(torch.load(f, map_location=device))
+    with open(os.path.join(model_dir, 'model_checkpoint.pth'), 'rb') as f:
+        model_checkpoint= torch.load(f, map_location=device)
+    loc2idx = model_checkpoint['loc2idx']
+    idx2loc = model_checkpoint['idx2loc']
     
-    model.eval()
-    return model
+    return {"model": model.eval(),"loc2idx": loc2idx, "idx2loc": idx2loc }
 
-def predict_fn(input_data, model):
+def predict_fn(input_data, model_artifact):
+    model = model_artifact['model']
+    loc2idx = model_artifact['loc2idx']
+    idx2loc = model_artifact['idx2loc']
+
     with torch.no_grad():
         embeddings = model.get_embeddings()
-    searched_idx = input_data['locationIDInput'][-1]
+    searched_idx = loc2idx[input_data['locationIDInput'][-1]]
     center_embeddings = embeddings[searched_idx]
     
     closest_index = distance.cdist([center_embeddings], embeddings, "cosine")[0]
@@ -147,33 +151,36 @@ def predict_fn(input_data, model):
     for idx, score in result[ :input_data['count']+1 ]:
         tmp_dict = { "id": idx, "score": score }
         res.append(tmp_dict)
+
+    for idx, pred in enumerate(res):
+        res[idx]["global_id"] = idx2loc[pred["id"]]
     return res
 
     
-def output_fn(predictions, id2loc_dict, content_type):
-    for idx, pred in enumerate(predictions):
-        predictions[idx]["global_id"] = id2loc_dict[pred["id"]]
-    return [predictions]
+def output_fn(predictions, content_type):
+    # for idx, pred in enumerate(predictions):
+    #     predictions[idx]["global_id"] = id2loc_dict[pred["id"]]
+    return predictions
 
 
 # if __name__ == "__main__":
     
-#     input_sample = """{"locationIDInput": ["mysta_25733"], "count": 5}"""
+#     input_sample = """{"locationIDInput": ["mysta_25733"], "count": 10}"""
 #     request_content_type = "application/json"
 #     response_content_type = "application/json"
-#     # model_dir = "models/"
-#     model_dir = '/Users/md.kamal/work-code-sample/location-recommendation/notebooks'
+# #     # model_dir = "models/"
+#     model_dir = '/Users/md.kamal/work-code-sample/temp/test-location-recommendation/artifact/'
 
-#     with open(f"{model_dir}/dict_loc.pickle", 'rb') as f:
-#         dict_loc = pickle.load(f)
+# #     with open(f"{model_dir}/dict_loc.pickle", 'rb') as f:
+# #         dict_loc = pickle.load(f)
 
-#     loc2id_dict = {w: idx for (idx, w) in enumerate(dict_loc)}
-#     id2loc_dict = {idx: w for (idx, w) in enumerate(dict_loc)}
+# #     loc2id_dict = {w: idx for (idx, w) in enumerate(dict_loc)}
+# #     id2loc_dict = {idx: w for (idx, w) in enumerate(dict_loc)}
  
 
-#     input_obj = input_fn(input_sample, loc2id_dict, request_content_type)
+#     input_obj = input_fn(input_sample, request_content_type)
 #     model = model_fn(model_dir)
 #     prediction = predict_fn(input_obj, model)
-#     output = output_fn(prediction, id2loc_dict, response_content_type)
+#     output = output_fn(prediction, response_content_type)
     
 #     print(output)
