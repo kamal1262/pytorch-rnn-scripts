@@ -14,8 +14,8 @@ from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import pyarrow as pa
-import pyarrow.parquet as pq
+# import pyarrow as pa
+# import pyarrow.parquet as pq
 
 
 ## sequence 
