@@ -163,6 +163,7 @@ def output_fn(prediction_output, accept=JSON_CONTENT_TYPE):
     if accept == JSON_CONTENT_TYPE:
         logger.info(f'prediction_output : {prediction_output}')
         return json.dumps(prediction_output), accept
+        
     raise Exception('Requested unsupported ContentType in Accept: ' + accept)
 
 
