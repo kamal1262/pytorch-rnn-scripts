@@ -122,6 +122,11 @@ def model_fn(model_dir):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = SkipGram(VOCAB_SIZE, EMB_SIZE).to(device)
     
+    print('model_dir:', model_dir)
+    for path, subdirs, files in os.walk(os.getcwd()):
+        for name in files:
+            print(os.path.join(path, name))
+    
     print('loading the model .....')
     # loaded_checkpoint = torch.load(model_dir+'/all-model-state.pt', map_location=device)
     with open(os.path.join(model_dir, 'model.pth'), 'rb') as f:
