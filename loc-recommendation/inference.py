@@ -17,6 +17,9 @@ import torch.nn.functional as F
 # from skipgram import SkipGram
 from scipy.spatial import distance
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 VOCAB_SIZE = 628
 EMB_SIZE = 128
@@ -128,15 +131,21 @@ def model_fn(model_dir):
             print(os.path.join(path, name))
     
     print('loading the model .....')
-    # loaded_checkpoint = torch.load(model_dir+'/all-model-state.pt', map_location=device)
+    # # loaded_checkpoint = torch.load(model_dir+'/all-model-state.pt', map_location=device)
+    # with open(os.path.join(model_dir, 'model.pth'), 'rb') as f:
+    #     model.load_state_dict(torch.load(f, map_location=device))
     with open(os.path.join(model_dir, 'model.pth'), 'rb') as f:
-        model.load_state_dict(torch.load(f, map_location=device))
-    
+        model.load_state_dict(torch.load(f))
+
+    model.to(device).eval()
+    # logger.info('model:', model)
+    print('model:', model)
     print('loading the model artefacts.......')
     with open(os.path.join(model_dir, 'model_checkpoint.pth'), 'rb') as f:
         model_checkpoint= torch.load(f, map_location=device)
     loc2idx = model_checkpoint['loc2idx']
     idx2loc = model_checkpoint['idx2loc']
+    logger.info(f'loc2idx loaded from checkpoint file, length of dic {len(loc2idx)}')
     
     return {"model": model.eval(),"loc2idx": loc2idx, "idx2loc": idx2loc }
 
@@ -170,24 +179,24 @@ def output_fn(predictions, content_type):
     return predictions
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
     
-#     input_sample = """{"locationIDInput": ["mysta_25733"], "count": 10}"""
-#     request_content_type = "application/json"
-#     response_content_type = "application/json"
-# #     # model_dir = "models/"
-#     model_dir = '/Users/md.kamal/work-code-sample/temp/test-location-recommendation/artifact/'
+    input_sample = """{"locationIDInput": ["mysta_25733"], "count": 10}"""
+    request_content_type = "application/json"
+    response_content_type = "application/json"
+#     # model_dir = "models/"
+    model_dir = '/Users/md.kamal/work-code-sample/temp/test-location-recommendation/artifact/'
 
-# #     with open(f"{model_dir}/dict_loc.pickle", 'rb') as f:
-# #         dict_loc = pickle.load(f)
+#     with open(f"{model_dir}/dict_loc.pickle", 'rb') as f:
+#         dict_loc = pickle.load(f)
 
-# #     loc2id_dict = {w: idx for (idx, w) in enumerate(dict_loc)}
-# #     id2loc_dict = {idx: w for (idx, w) in enumerate(dict_loc)}
+#     loc2id_dict = {w: idx for (idx, w) in enumerate(dict_loc)}
+#     id2loc_dict = {idx: w for (idx, w) in enumerate(dict_loc)}
  
 
-#     input_obj = input_fn(input_sample, request_content_type)
-#     model = model_fn(model_dir)
-#     prediction = predict_fn(input_obj, model)
-#     output = output_fn(prediction, response_content_type)
+    input_obj = input_fn(input_sample, request_content_type)
+    model = model_fn(model_dir)
+    prediction = predict_fn(input_obj, model)
+    output = output_fn(prediction, response_content_type)
     
-#     print(output)
+    print(output)
