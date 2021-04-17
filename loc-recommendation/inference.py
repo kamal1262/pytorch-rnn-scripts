@@ -118,14 +118,16 @@ def input_fn(request_body, content_type):
     return params
 
 def model_fn(model_dir):
+    print('declare the model now')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = SkipGram(VOCAB_SIZE, EMB_SIZE).to(device)
     
-    # Loading the model
+    print('loading the model .....')
     # loaded_checkpoint = torch.load(model_dir+'/all-model-state.pt', map_location=device)
     with open(os.path.join(model_dir, 'model.pth'), 'rb') as f:
         model.load_state_dict(torch.load(f, map_location=device))
-
+    
+    print('loading the model artefacts.......')
     with open(os.path.join(model_dir, 'model_checkpoint.pth'), 'rb') as f:
         model_checkpoint= torch.load(f, map_location=device)
     loc2idx = model_checkpoint['loc2idx']
