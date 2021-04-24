@@ -79,13 +79,13 @@ idx2loc = {idx: w for (idx, w) in enumerate(dict_loc)}
 vocab_size = len(dict_loc)
 print(f"vocab_size:{vocab_size}")
 
+# vocab_size = 628
 
-vocab_size = 628
 torch.manual_seed(1368)
 
 shuffle = True
 embedding_dims = 128
-epochs = 3
+epochs = 10
 initial_lr = 0.025
 batch_size = 16
 n_workers = 16
