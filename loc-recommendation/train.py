@@ -185,8 +185,8 @@ class Sequences:
         self.loc2id, self.id2loc = self.get_mapping_dicts()
         self.n_unique_tokens = len(self.loc2id)
         print('No. of unique tokens: {}'.format(self.n_unique_tokens))
-#         save_model(self.loc2id, '{}/loc2id'.format(MODEL_PATH))
-#         save_model(self.id2loc, '{}/id2loc'.format(MODEL_PATH))
+        save_model(self.loc2id, '{}/loc2id'.format(args.model_dir))
+        save_model(self.id2loc, '{}/id2loc'.format(args.model_dir))
         print('Loc2Id and Id2Loc created and saved')
         
         self.sequences = self.convert_sequence_to_id()
