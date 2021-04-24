@@ -41,6 +41,21 @@ from typing import Dict, List, Tuple
 
 from torch.utils.data import DataLoader
 
+
+def save_model(model: Any, model_path: str) -> None:
+    """
+    Saves model in gzip format
+    Args:
+        model: Model to be saved
+        model_path: Path to save model to
+    Returns:
+        (None)
+    """
+    with gzip.open(model_path, "wb") as f:
+        pickle.dump(model, f)
+
+    print('Model saved to {}'.format(model_path))
+
 ###
 parser = argparse.ArgumentParser(description='Word2Vec recommendation system')
 
